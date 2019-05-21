@@ -50,8 +50,13 @@ def details(request, slug):
     ):
         cache_content = get_page_cache(request)
         if cache_content is not None:
-            content, headers, expires_datetime = cache_content
+            if len(cache_content) == 3:
+                content, headers, expires_datetime = cache_content
+                status_code = HttpResponse.status_code
+            else:
+                status_code, content, headers, expires_datetime = cache_content
             response = HttpResponse(content)
+            response.status_code = status_code
             response._headers = headers
             # Recalculate the max-age header for this cached response
             max_age = int(

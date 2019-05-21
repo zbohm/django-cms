@@ -81,6 +81,7 @@ def set_page_cache(response):
             cache.set(
                 _page_cache_key(request),
                 (
+                    response.status_code,
                     response.content,
                     response._headers,
                     expires_datetime,
