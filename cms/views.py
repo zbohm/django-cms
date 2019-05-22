@@ -11,7 +11,7 @@ from django.utils.timezone import now
 from django.utils.translation import get_language_from_request
 from django.views.decorators.http import require_POST
 
-from cms.cache.page import get_page_cache
+from cms.cache.page import get_page_cache, get_page_cache_status_code
 from cms.exceptions import LanguageError
 from cms.forms.login import CMSToolbarLoginForm
 from cms.models.pagemodel import TreeNode
@@ -50,14 +50,10 @@ def details(request, slug):
     ):
         cache_content = get_page_cache(request)
         if cache_content is not None:
-            if len(cache_content) == 3:
-                content, headers, expires_datetime = cache_content
-                status_code = HttpResponse.status_code
-            else:
-                status_code, content, headers, expires_datetime = cache_content
+            content, headers, expires_datetime = cache_content
             response = HttpResponse(content)
-            response.status_code = status_code
             response._headers = headers
+            response.status_code = get_page_cache_status_code(request, response.status_code)
             # Recalculate the max-age header for this cached response
             max_age = int(
                 (expires_datetime - response_timestamp).total_seconds() + 0.5)
