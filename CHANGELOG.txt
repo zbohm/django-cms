@@ -1,6 +1,6 @@
 === 3.8.0 (unreleased) ===
 
-* ...
+* Add COLLATE "C" into the database table and column cms_cmsplugin.path.
 
 
 === 3.7.0 (2019-09-25) ===
