@@ -96,9 +96,10 @@ def set_page_cache(response):
     return response
 
 
-def get_page_cache(request):
+def get_page_cache_key_value(request):
     from django.core.cache import cache
-    return cache.get(_page_cache_key(request), version=_get_cache_version())
+    key = _page_cache_key(request)
+    return key, cache.get(key, version=_get_cache_version())
 
 
 def get_page_cache_status_code(request, default_code):

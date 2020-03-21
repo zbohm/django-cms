@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+from logging import getLogger
+
 from django.conf import settings
 from django.contrib.auth import login as auth_login, REDIRECT_FIELD_NAME
 from django.contrib.auth.views import redirect_to_login
@@ -11,7 +13,7 @@ from django.utils.timezone import now
 from django.utils.translation import get_language_from_request
 from django.views.decorators.http import require_POST
 
-from cms.cache.page import get_page_cache, get_page_cache_status_code
+from cms.cache.page import get_page_cache_key_value, get_page_cache_status_code
 from cms.exceptions import LanguageError
 from cms.forms.login import CMSToolbarLoginForm
 from cms.models.pagemodel import TreeNode
@@ -25,6 +27,8 @@ from cms.utils.i18n import (get_fallback_languages, get_public_languages,
                             is_language_prefix_patterns_used)
 from cms.utils.page import get_page_from_request
 from cms.utils.page_permissions import user_can_change_page
+
+logger = getLogger(__name__)
 
 
 def _clean_redirect_url(redirect_url, language):
@@ -48,17 +52,21 @@ def details(request, slug):
             not request.user.is_authenticated()
         )
     ):
-        cache_content = get_page_cache(request)
+        cache_key, cache_content = get_page_cache_key_value(request)
         if cache_content is not None:
-            content, headers, expires_datetime = cache_content
-            response = HttpResponse(content)
-            response._headers = headers
-            response.status_code = get_page_cache_status_code(request, response.status_code)
-            # Recalculate the max-age header for this cached response
-            max_age = int(
-                (expires_datetime - response_timestamp).total_seconds() + 0.5)
-            patch_cache_control(response, max_age=max_age)
-            return response
+            try:
+                content, headers, expires_datetime = cache_content
+            except (TypeError, ValueError) as msg:
+                logger.error('cache_key: {!r}; cache_content: {!r}; msg: {}'.format(cache_key, cache_content, msg))
+            else:
+                response = HttpResponse(content)
+                response._headers = headers
+                response.status_code = get_page_cache_status_code(request, response.status_code)
+                # Recalculate the max-age header for this cached response
+                max_age = int(
+                    (expires_datetime - response_timestamp).total_seconds() + 0.5)
+                patch_cache_control(response, max_age=max_age)
+                return response
 
     # Get a Page model object from the request
     site = get_current_site()
