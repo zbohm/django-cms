@@ -21,11 +21,14 @@ check for cache hits without re-computing placeholder.get_vary_cache_on().
 
 import hashlib
 import time
+from logging import getLogger
 
 from django.utils.timezone import now
 
 from cms.utils.conf import get_cms_setting
 from cms.utils.helpers import get_header_name, get_timezone_name
+
+logger = getLogger(__name__)
 
 
 def _get_placeholder_cache_version_key(placeholder, lang, site_id):
@@ -59,11 +62,15 @@ def _get_placeholder_cache_version(placeholder, lang, site_id):
     """
     from django.core.cache import cache
 
+    version = None
     key = _get_placeholder_cache_version_key(placeholder, lang, site_id)
     cached = cache.get(key)
     if cached:
-        version, vary_on_list = cached
-    else:
+        try:
+            version, vary_on_list = cached
+        except (TypeError, ValueError) as msg:
+            logger.error('cache_key: {!r}; cache_content: {!r}; msg: {}'.format(key, cached, msg))
+    if version is None:
         version = int(time.time() * 1000000)
         vary_on_list = []
         _set_placeholder_cache_version(placeholder, lang, site_id, version, vary_on_list)

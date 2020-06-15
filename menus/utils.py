@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+from urllib.parse import urlparse
+
 from django.conf import settings
 from django.urls import NoReverseMatch, reverse, resolve
 
@@ -143,6 +145,9 @@ class DefaultLanguageChanger(object):
             except:
                 view = None
         if hasattr(self.request, 'toolbar') and self.request.toolbar.obj:
+            url = hide_page_url(self.request)
+            if url is not None:
+                return url
             with force_language(lang):
                 try:
                     return self.request.toolbar.obj.get_absolute_url()
@@ -161,3 +166,15 @@ class DefaultLanguageChanger(object):
             if url:
                 return url
         return '%s%s' % (self.get_page_path(lang), self.app_path)
+
+
+def hide_page_url(request):
+    """Hide page url if it is required."""
+    if request.toolbar.obj.get_slug()[:5] == "error":
+        # For pages with the slug such as 'error404', 'error500', etc. do not refer to theirs url.
+        url = request.get_raw_uri()
+        if 'HTTP_REFERER' in request.META and urlparse(request.META['HTTP_REFERER']).netloc == request.get_host():
+            # Use referer only if previous page was from the site.
+            url = request.META['HTTP_REFERER']
+        return url
+    return None

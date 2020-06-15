@@ -1,8 +1,21 @@
 # -*- coding: utf-8 -*-
+from logging import getLogger, getLoggerClass
+import traceback
 import re
 from cms.utils.conf import get_cms_setting
 
 CMS_PAGE_CACHE_VERSION_KEY = get_cms_setting("CACHE_PREFIX") + '_PAGE_CACHE_VERSION'
+
+logger = getLogger(__name__)
+
+
+def _fix_version(value):
+    if isinstance(value, (list, tuple)):
+        array = []
+        for item in value:
+            array.append(_fix_version(item))
+        value = ".".join(array)
+    return "{}".format(value)
 
 
 def _get_cache_version():
@@ -13,6 +26,11 @@ def _get_cache_version():
     from django.core.cache import cache
 
     version = cache.get(CMS_PAGE_CACHE_VERSION_KEY)
+    if isinstance(version, (list, tuple)):
+        logger.error('Version cannot be array: {!r}'.format(version))
+        for handler in getLoggerClass().root.handlers:
+            traceback.print_stack(file=handler.stream)
+        version = _fix_version(version)
 
     if version:
         return version
@@ -26,6 +44,12 @@ def _set_cache_version(version):
     Set the cache version to the specified value.
     """
     from django.core.cache import cache
+
+    if isinstance(version, (list, tuple)):
+        logger.error('Version cannot be array: {!r}'.format(version))
+        for handler in getLoggerClass().root.handlers:
+            traceback.print_stack(file=handler.stream)
+        version = _fix_version(version)
 
     cache.set(
         CMS_PAGE_CACHE_VERSION_KEY,
