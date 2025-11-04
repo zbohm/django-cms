@@ -252,7 +252,11 @@ class ContentRenderer(BaseRenderer):
         language = language or self.request_language
         editable = editable and self._placeholders_are_editable
 
-        if use_cache and not editable and placeholder.cache_placeholder:
+        print("??? placeholder:", type(placeholder), placeholder)
+        # if placeholder is None:
+        #     import traceback; traceback.print_stack()  # !!!
+        #     print("!?" * 60)
+        if use_cache and not editable and placeholder is not None and placeholder.cache_placeholder:
             use_cache = self.placeholder_cache_is_enabled()
         else:
             use_cache = False
@@ -273,7 +277,7 @@ class ContentRenderer(BaseRenderer):
 
         context.push()
 
-        width = width or placeholder.default_width
+        width = width or placeholder is not None and placeholder.default_width
         template = page.get_template() if page else None
 
         if width:
@@ -283,9 +287,10 @@ class ContentRenderer(BaseRenderer):
         # since settings are general and database/template are specific
         # TODO this should actually happen as a plugin context processor, but these currently overwrite
         # existing context -- maybe change this order?
-        for key, value in placeholder.get_extra_context(template).items():
-            if key not in context:
-                context[key] = value
+        if placeholder is not None:
+            for key, value in placeholder.get_extra_context(template).items():
+                if key not in context:
+                    context[key] = value
 
         if use_cache:
             watcher = Watcher(context)
@@ -337,7 +342,7 @@ class ContentRenderer(BaseRenderer):
             has_content=bool(placeholder_content),
         )
 
-        if placeholder.pk not in self._rendered_placeholders:
+        if placeholder is not None and placeholder.pk not in self._rendered_placeholders:
             # First time this placeholder is rendered
             if not self.toolbar._cache_disabled:
                 # The toolbar middleware needs to know if the response
@@ -399,6 +404,10 @@ class ContentRenderer(BaseRenderer):
         if current_obj is None:
             raise PlaceholderNotFound(f"No object found for placeholder '{slot}'")
         placeholder = rescan_placeholders_for_obj(current_obj).get(slot)
+        print(".:" * 60)
+        print("current_obj:", type(current_obj))
+        print("slot:", slot)
+        print("placeholder:", placeholder)
         content = self.render_placeholder(
             placeholder,
             context=context,
